@@ -16,13 +16,51 @@ Let's continue working with enrollment data. I have downloaded 5 years of fall e
 ### Scene 1
 
 **Prompt:** Write a pipe which creates an object named `d_2019` by reading in and cleaning up the data from Fall 2019. (You will need to examine the file names to determine which file this is.) You may consult and re-use the code from last week. The variable names in the tibble should be `id`,  `title`, `name`, `department` and `u_grad`. Keep only classes with more than 10 undergrads enrolled.
+```{r}
+d_2019 <- 
+  read_excel("raw_data/class_enrollment_summary_by_term_12.20.19.xlsx",
+             skip = 3) %>%
+  rename(id = "Course ID", title = "Course Title", name = "Course Name", 
+         department = "Course Department", u_grad = "UGrad") %>%
+  select(id, title, name, department, u_grad) %>%
+  filter(u_grad > 10)
 
+d_2019
 
-
+```
 
 ### Scene 2
 
 **Prompt:** We could copy/paste this code 5 times, adjust the files names, and then read in each file. But, as you know from Chapter 4, that is a bad idea. It also scales very poorly. Create a function called `read_enrollent` which takes one argument, `file`. Use that function to read in the data from fall 2019 and assign it to an object called `d_2019_take_2`. Do you get the same answer as you did in Scene 1?
+
+```{r}
+read_excel("raw_data/class_enrollment_summary_by_term_10.24.18.xlsx", skip = 2)
+```
+
+
+```{r}
+read_enrollment <- function(file, skip = 3) {
+  temp <- read_excel(file, skip = skip) %>%
+    rename(id = "Course ID", title = "Course Title", name = "Course Name", 
+         department = "Course Department", u_grad = "UGrad") %>%
+    summarize(u_grad = sum(u_grad), .groups = "drop") %>%
+    select(id, title, name, department, u_grad) %>%
+    filter(u_grad > 10)
+  
+  temp
+}
+
+
+path = "raw_data/class_enrollment_summary_by_term_12.20.19.xlsx"
+
+d_2019_take2 <- read_enrollment(path)
+# Need to skip 2 rows in 2018, not 3 like in 2019.
+d_2018 <- read_enrollment("raw_data/class_enrollment_summary_by_term_10.24.18.xlsx")
+d_2017 <- read_enrollment("raw_data/class_enrollment_summary_by_term_10.20.17.xlsx")
+d_2016 <- read_enrollment("raw_data/class_enrollment_summary_by_term_fall_2016.xlsx")
+d_2015 <- read_enrollment("raw_data/class_enrollment_summary_by_term_fall_2015.xlsx")
+```
+
 
 
 
@@ -31,11 +69,58 @@ Let's continue working with enrollment data. I have downloaded 5 years of fall e
 **Prompt:** Call `read_enrollent()` five times, once for each of our data sets. Note how different the file names are. Real data is messy! Assign the result of each call to an object, `d_2019`, `d_2018` and so on. Should be easy . . .
 
 Arrg! Depending in how you wrote `read_enrollment()`, you will probably be getting an error, for at least some of the years.  How annoying that Harvard changes the format! Make your function flexible enough to deal with all these files. Hint: You need to add at least one argument in addition to `file` so that you can change the behavior of the function when you call it. Give that new argument a sensible default.
+```{r}
+read_enrollment <- function(file, skip_lines) {
+  temp <- read_excel(file, skip = skip_lines) %>%
+    rename(id = "Course ID", title = "Course Title", name = "Course Name", 
+         department = "Course Department", u_grad = "UGrad") %>%
+    group_by(id, title, name, department) %>% 
+    summarize(u_grad = sum(u_grad), .groups = "drop") %>%
+    select(id, title, name, department, u_grad) %>%
+    filter(u_grad > 10)
+  
+  temp
+}
+
+d_2018 <- read_enrollment(file = "raw_data/class_enrollment_summary_by_term_10.24.18.xlsx", skip_lines = 2)
+d_2017 <- read_enrollment(file = "raw_data/class_enrollment_summary_by_term_10.20.17.xlsx", skip_lines = 3)
+d_2016 <- read_enrollment(file = "raw_data/class_enrollment_summary_by_term_fall_2016.xlsx", skip_lines = 0)
+d_2015 <- read_enrollment(file = "raw_data/class_enrollment_summary_by_term_fall_2015.xlsx", skip_lines = 3)
+```
+
+
+```{r}
+read_excel("raw_data/class_enrollment_summary_by_term_10.24.18.xlsx", skip = 2) %>%
+  rename(id = "Course ID") %>%
+  summarize(UGrad = sum(UGrad))
+```
 
 
 ### Scene 4
 
 **Prompt:** Combine the five tibbles which you have into a single tibble which can then be used for analysis and graphics. There are many ways to do this, but we recommend `bind_rows()`. Hint: make use of the `.id` argument, which may be aided by placing the tibbles in a list.
+```{r}
+d_2018 <- d_2018 %>%
+  mutate(year = 2018)
+
+d_2019 <- d_2019 %>%
+  mutate(year = 2019)
+
+d_2017 <- d_2017 %>%
+  mutate(year = 2017)
+
+d_2016 <- d_2016 %>%
+  mutate(year = 2016)
+
+d_2015 <- d_2015 %>%
+  mutate(year = 2015)
+```
+
+
+```{r}
+x <- bind_rows(d_2019, d_2018, d_2017, d_2016, d_2015, .id = "year")
+x
+```
 
 
 
